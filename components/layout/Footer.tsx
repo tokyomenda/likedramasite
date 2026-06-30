@@ -5,9 +5,9 @@ export function Footer() {
   return (
     <footer className="relative overflow-hidden border-t border-white/10 bg-black">
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-400/70 to-transparent" />
-      <div className="absolute -top-24 right-8 h-56 w-56 rounded-full bg-orange-500/10 blur-3xl" />
+      <div className="absolute -top-24 right-8 h-56 w-56 rounded-full bg-orange-500/12 blur-3xl" />
 
-      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.6fr_0.8fr_0.8fr_1fr] lg:px-8">
+      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 md:grid-cols-[1.6fr_0.8fr_0.8fr_1fr] lg:px-8">
         <div>
           <p className="text-2xl font-black tracking-wide text-white">
             Like<span className="text-orange-400">Drama</span>
@@ -19,7 +19,7 @@ export function Footer() {
           <div className="mt-6 flex flex-wrap gap-3">
             {["HD", "VIP", "Шинэ анги", "Монгол хадмал"].map((item) => (
               <span
-                className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold text-zinc-300"
+              className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-semibold text-zinc-300 shadow-lg shadow-black/10"
                 key={item}
               >
                 {item}
@@ -35,7 +35,7 @@ export function Footer() {
           <div className="mt-4 grid gap-3">
             {quickLinks.map((link) => (
               <a
-                className="text-sm font-medium text-zinc-300 transition hover:text-orange-300"
+                className="text-sm font-medium text-zinc-300 transition duration-300 hover:text-orange-300"
                 href="#"
                 key={link}
               >
@@ -52,7 +52,7 @@ export function Footer() {
           <div className="mt-4 grid gap-3">
             {genres.map((genre) => (
               <a
-                className="text-sm font-medium text-zinc-300 transition hover:text-orange-300"
+                className="text-sm font-medium text-zinc-300 transition duration-300 hover:text-orange-300"
                 href="#"
                 key={genre}
               >

@@ -1,11 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { MovieDetailClient } from "@/components/movie/MovieDetailClient";
-import {
-  getMovieDetail,
-  getRecommendedMovies,
-  movieComments,
-} from "@/data/movieDetails";
+import { PublicMovieDetailResolver } from "@/components/movie/PublicMovieDetailResolver";
 import { movies } from "@/data/movies";
 
 type MoviePageProps = {
@@ -26,7 +20,7 @@ export async function generateMetadata({
 
   if (!movie) {
     return {
-      title: "Кино олдсонгүй | LikeDrama",
+      title: "Кино | LikeDrama",
     };
   }
 
@@ -38,18 +32,6 @@ export async function generateMetadata({
 
 export default async function MoviePage({ params }: MoviePageProps) {
   const { slug } = await params;
-  const movie = movies.find((item) => item.id === slug);
 
-  if (!movie) {
-    notFound();
-  }
-
-  return (
-    <MovieDetailClient
-      comments={movieComments}
-      detail={getMovieDetail(movie)}
-      movie={movie}
-      recommended={getRecommendedMovies(movie)}
-    />
-  );
+  return <PublicMovieDetailResolver slug={slug} />;
 }

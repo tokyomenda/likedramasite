@@ -2,11 +2,15 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { AdminButton } from "@/components/admin/AdminButton";
 import { AdminInput } from "@/components/admin/AdminInput";
 
 const ADMIN_SESSION_KEY = "likedrama-admin-session";
+
+function isLocalDevelopmentHost() {
+  return ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+}
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -14,6 +18,28 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [canUseMockAdmin, setCanUseMockAdmin] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setCanUseMockAdmin(isLocalDevelopmentHost());
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  const enterAdminMode = (isMockAdmin = false) => {
+    localStorage.setItem(
+      ADMIN_SESSION_KEY,
+      JSON.stringify({
+        email: "admin@likedrama.mn",
+        role: "admin",
+        isMockAdmin,
+        loggedAt: new Date().toISOString(),
+      }),
+    );
+    router.replace("/admin");
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -32,17 +58,25 @@ export default function AdminLoginPage() {
     setIsLoading(true);
     await new Promise((resolve) => window.setTimeout(resolve, 600));
 
-    if (email.trim().toLowerCase() !== "admin@likedrama.mn" || password !== "admin123") {
+    if (
+      email.trim().toLowerCase() !== "admin@likedrama.mn" ||
+      password !== "admin123"
+    ) {
       setError("Админ эрхийн мэдээлэл буруу байна.");
       setIsLoading(false);
       return;
     }
 
-    localStorage.setItem(
-      ADMIN_SESSION_KEY,
-      JSON.stringify({ email: "admin@likedrama.mn", loggedAt: new Date().toISOString() }),
-    );
-    router.replace("/admin");
+    enterAdminMode(false);
+  };
+
+  const handleMockAdmin = () => {
+    if (!canUseMockAdmin) {
+      setError("Mock админ горим зөвхөн local development орчинд ажиллана.");
+      return;
+    }
+
+    enterAdminMode(true);
   };
 
   return (
@@ -65,6 +99,10 @@ export default function AdminLoginPage() {
               <p className="text-sm font-bold text-orange-300">Demo админ</p>
               <p className="mt-2 text-sm text-zinc-300">
                 admin@likedrama.mn / admin123
+              </p>
+              <p className="mt-3 text-xs leading-6 text-zinc-500">
+                Түр хөгжүүлэлтийн үед localStorage дээр mock админ горим хадгалж
+                админ хуудсуудыг шалгана.
               </p>
             </div>
           </section>
@@ -101,6 +139,16 @@ export default function AdminLoginPage() {
                 {isLoading ? "Шалгаж байна..." : "Админ нэвтрэх"}
               </AdminButton>
             </form>
+
+            {canUseMockAdmin && (
+              <button
+                className="mt-4 w-full rounded-2xl border border-orange-400/40 bg-orange-500/10 px-4 py-3 text-sm font-bold text-orange-100 transition hover:bg-orange-500/20"
+                onClick={handleMockAdmin}
+                type="button"
+              >
+                Хөгжүүлэлтийн mock админ горим
+              </button>
+            )}
           </section>
         </div>
       </div>

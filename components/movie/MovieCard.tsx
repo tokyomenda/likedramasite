@@ -20,11 +20,11 @@ export function MovieCard({ movie, rank }: MovieCardProps) {
 
   return (
     <motion.article
-      className="group relative min-w-[190px] overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 shadow-xl shadow-black/20 transition-colors duration-300 hover:border-orange-400/50 sm:min-w-0"
+      className="group relative min-w-[190px] overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 shadow-[0_18px_45px_rgba(0,0,0,0.28)] transition-colors duration-300 hover:border-orange-400/55 sm:min-w-0"
       whileHover={{
         y: -8,
         scale: 1.035,
-        boxShadow: "0 26px 60px rgba(249,115,22,0.22)",
+        boxShadow: "0 28px 70px rgba(249,115,22,0.26)",
       }}
       transition={{ type: "spring", stiffness: 260, damping: 22 }}
     >
@@ -37,13 +37,13 @@ export function MovieCard({ movie, rank }: MovieCardProps) {
         <div className="relative aspect-[2/3] overflow-hidden bg-zinc-900">
           <img
             alt={movie.title}
-            className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.08]"
+            className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.09]"
             src={movie.posterUrl}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent opacity-85" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/32 to-transparent opacity-88" />
           <div className="absolute inset-0 bg-orange-500/0 opacity-0 transition duration-300 group-hover:bg-orange-500/10 group-hover:opacity-100" />
-          <div className="absolute inset-0 grid place-items-center bg-black/20 opacity-0 transition duration-300 group-hover:opacity-100">
-            <span className="grid h-14 w-14 translate-y-2 place-items-center rounded-full bg-orange-500 text-xl text-white shadow-[0_16px_45px_rgba(249,115,22,0.45)] transition duration-300 group-hover:translate-y-0">
+          <div className="absolute inset-0 grid place-items-center bg-black/25 opacity-0 transition duration-300 group-hover:opacity-100">
+            <span className="grid h-14 w-14 translate-y-2 place-items-center rounded-full bg-orange-500 text-xl text-white shadow-[0_18px_50px_rgba(249,115,22,0.5)] transition duration-300 group-hover:translate-y-0 group-hover:scale-105">
               ▶
             </span>
           </div>
@@ -57,11 +57,11 @@ export function MovieCard({ movie, rank }: MovieCardProps) {
 
         <div className="p-4">
           <div>
-            <h3 className="line-clamp-2 min-h-12 text-base font-bold leading-6 text-white">
+            <h3 className="line-clamp-2 min-h-12 text-base font-extrabold leading-6 text-white">
               {movie.title}
             </h3>
           </div>
-          <p className="mt-2 text-sm text-zinc-400">{movie.genre}</p>
+          <p className="mt-2 text-sm font-medium text-zinc-400">{movie.genre}</p>
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <Badge className="h-8 px-3 py-0" tone="dark">
               ⭐ {movie.rating}
@@ -79,7 +79,7 @@ export function MovieCard({ movie, rank }: MovieCardProps) {
 
       <button
         aria-label="Дуртайд нэмэх"
-        className="absolute right-3 top-3 z-20 grid h-9 w-9 place-items-center rounded-full border border-white/15 bg-black/45 text-white opacity-0 backdrop-blur transition hover:border-orange-300 hover:text-orange-200 group-hover:opacity-100"
+        className="absolute right-3 top-3 z-20 grid h-9 w-9 place-items-center rounded-full border border-white/15 bg-black/50 text-white opacity-0 shadow-lg shadow-black/25 backdrop-blur transition duration-300 hover:scale-105 hover:border-orange-300 hover:text-orange-200 group-hover:opacity-100"
         type="button"
       >
         ♡

@@ -1,11 +1,18 @@
+"use client";
+
 import { Footer } from "@/components/layout/Footer";
 import { Navbar } from "@/components/layout/Navbar";
 import { CategoryPills } from "@/components/movie/CategoryPills";
 import { HeroSection } from "@/components/movie/HeroSection";
 import { MovieSection } from "@/components/movie/MovieSection";
-import { categories, featuredMovies, movieSections } from "@/data/movies";
+import { categories } from "@/data/movies";
+import { getPublicMovieSections, usePublicMovies } from "@/hooks/usePublicMovies";
 
 export default function Home() {
+  const { movies } = usePublicMovies();
+  const featuredMovies = movies.slice(0, 5);
+  const movieSections = getPublicMovieSections(movies);
+
   return (
     <div className="min-h-screen bg-black text-white">
       <Navbar />

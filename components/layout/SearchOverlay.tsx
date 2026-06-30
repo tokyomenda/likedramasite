@@ -3,8 +3,8 @@
 /* eslint-disable @next/next/no-img-element */
 import { AnimatePresence, motion } from "framer-motion";
 import { useMemo, useState } from "react";
-import { movies } from "@/data/movies";
 import { Badge } from "@/components/ui/Badge";
+import { usePublicMovies } from "@/hooks/usePublicMovies";
 
 type SearchOverlayProps = {
   isOpen: boolean;
@@ -13,6 +13,7 @@ type SearchOverlayProps = {
 
 export function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
   const [query, setQuery] = useState("");
+  const { movies } = usePublicMovies();
 
   const results = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -36,7 +37,7 @@ export function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
         return searchable.includes(normalizedQuery);
       })
       .slice(0, 10);
-  }, [query]);
+  }, [movies, query]);
 
   return (
     <AnimatePresence>
@@ -91,7 +92,7 @@ export function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                 <motion.a
                   animate={{ y: 0, opacity: 1 }}
                   className="group grid grid-cols-[74px_1fr] gap-4 rounded-2xl border border-white/10 bg-white/[0.05] p-3 transition hover:border-orange-400/50 hover:bg-white/[0.08]"
-                  href="#"
+                  href={`/movie/${movie.id}`}
                   initial={{ y: 12, opacity: 0 }}
                   key={movie.id}
                   onClick={onClose}

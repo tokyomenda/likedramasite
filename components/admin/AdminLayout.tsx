@@ -10,6 +10,7 @@ const ADMIN_SESSION_KEY = "likedrama-admin-session";
 const titles: Record<string, string> = {
   "/admin": "Хянах самбар",
   "/admin/movies": "Кинонууд",
+  "/admin/movies/new": "Кино нэмэх",
   "/admin/episodes": "Ангиуд",
   "/admin/banners": "Баннер",
   "/admin/users": "Хэрэглэгчид",
@@ -17,6 +18,37 @@ const titles: Record<string, string> = {
   "/admin/payments": "Төлбөрүүд",
   "/admin/settings": "Тохиргоо",
 };
+
+function isLocalDevelopmentHost() {
+  return ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+}
+
+function hasValidAdminSession() {
+  const rawSession = localStorage.getItem(ADMIN_SESSION_KEY);
+
+  if (!rawSession) {
+    return false;
+  }
+
+  try {
+    const session = JSON.parse(rawSession) as {
+      email?: string;
+      role?: string;
+      isMockAdmin?: boolean;
+    };
+
+    const isDemoAdmin =
+      session.email === "admin@likedrama.mn" && session.role === "admin";
+    const isDevelopmentMockAdmin =
+      session.isMockAdmin === true &&
+      session.role === "admin" &&
+      isLocalDevelopmentHost();
+
+    return isDemoAdmin || isDevelopmentMockAdmin;
+  } catch {
+    return false;
+  }
+}
 
 export function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -32,9 +64,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         return;
       }
 
-      const session = localStorage.getItem(ADMIN_SESSION_KEY);
-
-      if (!session) {
+      if (!hasValidAdminSession()) {
         router.replace("/admin/login");
         return;
       }

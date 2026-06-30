@@ -1,12 +1,6 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { WatchPageClient } from "@/components/movie/WatchPageClient";
-import { getMovieDetail, getRecommendedMovies } from "@/data/movieDetails";
+import { PublicWatchResolver } from "@/components/movie/PublicWatchResolver";
 import { movies } from "@/data/movies";
-
-type WatchPageProps = {
-  params: Promise<{ slug: string }>;
-};
 
 export function generateStaticParams() {
   return movies.map((movie) => ({
@@ -16,13 +10,13 @@ export function generateStaticParams() {
 
 export async function generateMetadata({
   params,
-}: WatchPageProps): Promise<Metadata> {
+}: PageProps<"/watch/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const movie = movies.find((item) => item.id === slug);
 
   if (!movie) {
     return {
-      title: "Үзэх хуудас олдсонгүй | LikeDrama",
+      title: "Үзэх хуудас | LikeDrama",
     };
   }
 
@@ -32,19 +26,8 @@ export async function generateMetadata({
   };
 }
 
-export default async function WatchPage({ params }: WatchPageProps) {
+export default async function WatchPage({ params }: PageProps<"/watch/[slug]">) {
   const { slug } = await params;
-  const movie = movies.find((item) => item.id === slug);
 
-  if (!movie) {
-    notFound();
-  }
-
-  return (
-    <WatchPageClient
-      detail={getMovieDetail(movie)}
-      movie={movie}
-      relatedMovies={getRecommendedMovies(movie)}
-    />
-  );
+  return <PublicWatchResolver slug={slug} />;
 }

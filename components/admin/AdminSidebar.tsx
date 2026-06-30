@@ -71,7 +71,7 @@ export function AdminSidebar({ isOpen, onClose, onLogout }: AdminSidebarProps) {
           onClick={onLogout}
           type="button"
         >
-          Гарах
+          Админ горимоос гарах
         </button>
       </aside>
     </>

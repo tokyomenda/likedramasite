@@ -3,15 +3,23 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { LoginModal } from "@/components/layout/LoginModal";
 import { MobileDrawer } from "@/components/layout/MobileDrawer";
-import { SearchOverlay } from "@/components/layout/SearchOverlay";
+import { SearchModal } from "@/components/layout/SearchModal";
 
-const navLinks = ["Нүүр", "Кино", "Ангилал", "VIP", "Миний кинонууд"];
+const navLinks = [
+  { label: "Нүүр", href: "/" },
+  { label: "Кино", href: "/movies" },
+  { label: "Ангилал", href: "/categories" },
+  { label: "VIP", href: "/vip" },
+  { label: "Миний кинонууд", href: "/my-list" },
+];
 
 export function Navbar() {
   const { user, logout } = useAuth();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
@@ -26,15 +34,15 @@ export function Navbar() {
   return (
     <>
       <header
-        className={`fixed top-0 z-40 w-full transition duration-500 ${
+        className={`fixed top-0 z-40 w-full transition-all duration-500 ${
           isScrolled
-            ? "border-b border-white/10 bg-black/78 shadow-2xl shadow-black/35 backdrop-blur-xl"
-            : "border-b border-transparent bg-transparent"
+            ? "border-b border-white/10 bg-black/85 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur-2xl"
+            : "border-b border-transparent bg-gradient-to-b from-black/55 to-transparent"
         }`}
       >
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Link
-            className="text-2xl font-black tracking-wide text-white transition hover:text-orange-100"
+            className="text-2xl font-black tracking-wide text-white drop-shadow-[0_8px_22px_rgba(0,0,0,0.55)] transition hover:text-orange-100"
             href="/"
             aria-label="LikeDrama нүүр"
           >
@@ -43,20 +51,20 @@ export function Navbar() {
 
           <nav className="hidden items-center gap-8 lg:flex">
             {navLinks.map((link, index) => (
-              <a
-                className={`group relative py-2 text-sm font-semibold transition hover:text-white ${
+              <Link
+                className={`group relative py-2 text-sm font-semibold transition duration-300 hover:text-white ${
                   index === 0 ? "text-white" : "text-zinc-300"
                 }`}
-                href="#"
-                key={link}
+                href={link.href}
+                key={link.href}
               >
-                {link}
+                {link.label}
                 <span
                   className={`absolute -bottom-1 left-0 h-0.5 rounded-full bg-orange-400 transition-all duration-300 ${
                     index === 0 ? "w-full" : "w-0 group-hover:w-full"
                   }`}
                 />
-              </a>
+              </Link>
             ))}
           </nav>
 
@@ -83,11 +91,11 @@ export function Navbar() {
             </button>
             {user ? (
               <div className="flex items-center gap-2">
-                <div className="rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-bold text-white">
+                <div className="rounded-full border border-white/10 bg-white/[0.08] px-4 py-2 text-sm font-bold text-white shadow-lg shadow-black/20">
                   {user.name}
                 </div>
                 <button
-                  className="rounded-full border border-orange-400/45 px-4 py-2 text-sm font-bold text-orange-100 transition hover:bg-orange-500/15"
+                  className="rounded-full border border-orange-400/45 px-4 py-2 text-sm font-bold text-orange-100 transition duration-300 hover:bg-orange-500/15 hover:shadow-[0_12px_30px_rgba(249,115,22,0.18)]"
                   onClick={logout}
                   type="button"
                 >
@@ -95,12 +103,13 @@ export function Navbar() {
                 </button>
               </div>
             ) : (
-              <Link
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-orange-500 px-6 py-3 text-sm font-semibold text-white shadow-[0_16px_45px_rgba(249,115,22,0.35)] transition duration-300 hover:bg-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 focus:ring-offset-black"
-                href="/login"
+              <button
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-orange-500 px-6 py-3 text-sm font-semibold text-white shadow-[0_16px_45px_rgba(249,115,22,0.35)] transition duration-300 hover:-translate-y-0.5 hover:bg-orange-400 hover:shadow-[0_20px_55px_rgba(249,115,22,0.46)] focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 focus:ring-offset-black"
+                onClick={() => setIsLoginOpen(true)}
+                type="button"
               >
                 Нэвтрэх
-              </Link>
+              </button>
             )}
           </div>
 
@@ -147,11 +156,13 @@ export function Navbar() {
         onLogout={logout}
         onClose={() => setIsDrawerOpen(false)}
         userName={user?.name}
+        onLoginClick={() => setIsLoginOpen(true)}
       />
-      <SearchOverlay
+      <SearchModal
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
       />
+      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
     </>
   );
 }

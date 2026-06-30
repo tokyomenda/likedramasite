@@ -5,9 +5,10 @@ import Link from "next/link";
 type MobileDrawerProps = {
   isOpen: boolean;
   onClose: () => void;
-  links: string[];
+  links: Array<{ label: string; href: string }>;
   userName?: string;
   onLogout?: () => void;
+  onLoginClick?: () => void;
 };
 
 export function MobileDrawer({
@@ -16,6 +17,7 @@ export function MobileDrawer({
   links,
   userName,
   onLogout,
+  onLoginClick,
 }: MobileDrawerProps) {
   const handleLogout = () => {
     onLogout?.();
@@ -58,14 +60,14 @@ export function MobileDrawer({
 
         <nav className="mt-9 flex flex-col gap-2">
           {links.map((link) => (
-            <a
+            <Link
               className="rounded-2xl px-4 py-3 text-base font-semibold text-zinc-200 transition hover:bg-white/10 hover:text-white"
-              href="#"
-              key={link}
+              href={link.href}
+              key={link.href}
               onClick={onClose}
             >
-              {link}
-            </a>
+              {link.label}
+            </Link>
           ))}
         </nav>
 
@@ -84,13 +86,16 @@ export function MobileDrawer({
               </button>
             </div>
           ) : (
-            <Link
+            <button
               className="inline-flex w-full items-center justify-center rounded-full bg-orange-500 px-5 py-3 text-sm font-bold text-white shadow-[0_16px_45px_rgba(249,115,22,0.35)] transition hover:bg-orange-400"
-              href="/login"
-              onClick={onClose}
+              onClick={() => {
+                onClose();
+                onLoginClick?.();
+              }}
+              type="button"
             >
               Нэвтрэх
-            </Link>
+            </button>
           )}
         </div>
       </aside>

@@ -5,9 +5,10 @@ import { motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Footer } from "@/components/layout/Footer";
 import { Navbar } from "@/components/layout/Navbar";
-import { Badge } from "@/components/ui/Badge";
 import { MovieSection } from "@/components/movie/MovieSection";
-import type { Movie, MovieDetail, Episode } from "@/types/movie";
+import { Badge } from "@/components/ui/Badge";
+import { getEpisodeVideoSource } from "@/lib/adminEpisodes";
+import type { Episode, Movie, MovieDetail } from "@/types/movie";
 
 type WatchPageClientProps = {
   movie: Movie;
@@ -15,9 +16,23 @@ type WatchPageClientProps = {
   relatedMovies: Movie[];
 };
 
+type ContinuePayload = {
+  movieId: string;
+  title: string;
+  episode: number;
+  posterUrl: string;
+  currentTime: number;
+  duration: number;
+  updatedAt: string;
+};
+
 const speeds = [0.75, 1, 1.25, 1.5, 2];
-const subtitleOptions = ["Off", "Монгол", "English"];
-const qualityOptions = ["Auto", "1080", "720", "480"];
+const subtitleOptions = ["Унтраах", "Монгол", "Англи"];
+const qualityOptions = ["Автомат", "1080P", "720P", "480P"];
+const continueWatchingKey = "likedrama-continue-watching";
+const localVideoSource = "/videos/demo.mp4";
+const fallbackVideoSource =
+  "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
 
 function formatTime(value: number) {
   if (!Number.isFinite(value)) {
@@ -40,11 +55,11 @@ function buildWatchEpisodes(detail: MovieDetail): Episode[] {
   }
 
   return Array.from({ length: 16 }, (_, index) => {
-    const existing = detail.episodes[index];
+    const existingEpisode = detail.episodes[index];
     const number = index + 1;
 
     return (
-      existing ?? {
+      existingEpisode ?? {
         number,
         title: `${number}-р анги`,
         duration: number % 3 === 0 ? "58 мин" : "46 мин",
@@ -63,6 +78,7 @@ export function WatchPageClient({
   const playerRef = useRef<HTMLDivElement>(null);
   const hideControlsTimerRef = useRef<number | null>(null);
   const episodes = useMemo(() => buildWatchEpisodes(detail), [detail]);
+
   const [activeEpisode, setActiveEpisode] = useState(episodes[0]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
@@ -77,8 +93,128 @@ export function WatchPageClient({
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
+  const [videoSource, setVideoSource] = useState(localVideoSource);
+  const [videoLoadFailed, setVideoLoadFailed] = useState(false);
+
+  const currentEpisodeIndex = episodes.findIndex(
+    (episode) => episode.number === activeEpisode.number,
+  );
+  const canGoPrevious = currentEpisodeIndex > 0;
+  const canGoNext = currentEpisodeIndex < episodes.length - 1;
   const storageKey = `likedrama-watch:${movie.id}:${activeEpisode.number}`;
-  const continueWatchingKey = "likedrama-continue-watching";
+
+  useEffect(() => {
+    const requestedEpisode = Number(
+      new URLSearchParams(window.location.search).get("episode"),
+    );
+
+    if (!requestedEpisode || requestedEpisode === activeEpisode.number) {
+      return;
+    }
+
+    const nextEpisode = episodes.find(
+      (episode) => episode.number === requestedEpisode,
+    );
+
+    if (!nextEpisode) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setActiveEpisode(nextEpisode);
+      setNextCountdown(null);
+      setProgress(0);
+      setCurrentTime(0);
+      setDuration(0);
+      setIsBuffering(false);
+      setVideoLoadFailed(false);
+      setShowControls(true);
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [activeEpisode.number, episodes]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const adminVideoSource = getEpisodeVideoSource(
+        movie.id,
+        activeEpisode.number,
+      );
+
+      setVideoSource(adminVideoSource || localVideoSource);
+      setVideoLoadFailed(false);
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [activeEpisode.number, movie.id]);
+
+  const showPlayerControls = () => {
+    setShowControls(true);
+  };
+
+  const toggleFullscreen = useCallback(async () => {
+    const player = playerRef.current;
+
+    if (!player) {
+      return;
+    }
+
+    if (!document.fullscreenElement) {
+      await player.requestFullscreen().catch(() => undefined);
+      return;
+    }
+
+    await document.exitFullscreen().catch(() => undefined);
+  }, []);
+
+  const handleEpisodeSelect = useCallback(
+    (episode: Episode, shouldAutoplay = isPlaying) => {
+      const video = videoRef.current;
+
+      setActiveEpisode(episode);
+      setNextCountdown(null);
+      setProgress(0);
+      setCurrentTime(0);
+      setDuration(0);
+      setIsBuffering(false);
+      setVideoLoadFailed(false);
+      setShowControls(true);
+
+      if (!video) {
+        return;
+      }
+
+      video.pause();
+      video.currentTime = 0;
+      video.load();
+
+      if (shouldAutoplay) {
+        window.setTimeout(() => {
+          video.play().catch(() => undefined);
+        }, 80);
+      }
+    },
+    [isPlaying],
+  );
+
+  const goToPreviousEpisode = useCallback(() => {
+    if (!canGoPrevious) {
+      return;
+    }
+
+    handleEpisodeSelect(episodes[currentEpisodeIndex - 1]);
+  }, [canGoPrevious, currentEpisodeIndex, episodes, handleEpisodeSelect]);
+
+  const goToNextEpisode = useCallback(
+    (shouldAutoplay = true) => {
+      if (!canGoNext) {
+        return;
+      }
+
+      handleEpisodeSelect(episodes[currentEpisodeIndex + 1], shouldAutoplay);
+    },
+    [canGoNext, currentEpisodeIndex, episodes, handleEpisodeSelect],
+  );
 
   useEffect(() => {
     const video = videoRef.current;
@@ -111,6 +247,18 @@ export function WatchPageClient({
   }, [playbackRate]);
 
   useEffect(() => {
+    const video = videoRef.current;
+
+    if (!video || !isPlaying || videoLoadFailed) {
+      return;
+    }
+
+    window.setTimeout(() => {
+      video.play().catch(() => undefined);
+    }, 80);
+  }, [isPlaying, videoLoadFailed, videoSource]);
+
+  useEffect(() => {
     if (hideControlsTimerRef.current) {
       window.clearTimeout(hideControlsTimerRef.current);
     }
@@ -136,7 +284,7 @@ export function WatchPageClient({
         return;
       }
 
-      const payload = {
+      const payload: ContinuePayload = {
         movieId: movie.id,
         title: movie.title,
         episode: activeEpisode.number,
@@ -149,7 +297,9 @@ export function WatchPageClient({
       localStorage.setItem(storageKey, JSON.stringify(payload));
 
       const rawList = localStorage.getItem(continueWatchingKey);
-      const existingList = rawList ? (JSON.parse(rawList) as typeof payload[]) : [];
+      const existingList = rawList
+        ? (JSON.parse(rawList) as ContinuePayload[])
+        : [];
       const nextList = [
         payload,
         ...existingList.filter((item) => item.movieId !== movie.id),
@@ -159,14 +309,30 @@ export function WatchPageClient({
     }, 5000);
 
     return () => window.clearInterval(saveInterval);
-  }, [
-    activeEpisode.number,
-    continueWatchingKey,
-    movie.id,
-    movie.posterUrl,
-    movie.title,
-    storageKey,
-  ]);
+  }, [activeEpisode.number, movie.id, movie.posterUrl, movie.title, storageKey]);
+
+  useEffect(() => {
+    if (nextCountdown === null) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setNextCountdown((current) => {
+        if (current === null) {
+          return null;
+        }
+
+        if (current <= 1) {
+          window.setTimeout(() => goToNextEpisode(true), 0);
+          return null;
+        }
+
+        return current - 1;
+      });
+    }, 1000);
+
+    return () => window.clearTimeout(timer);
+  }, [goToNextEpisode, nextCountdown]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -207,17 +373,7 @@ export function WatchPageClient({
       }
 
       if (event.key.toLowerCase() === "f") {
-        const player = playerRef.current;
-
-        if (!player) {
-          return;
-        }
-
-        if (!document.fullscreenElement) {
-          player.requestFullscreen().catch(() => undefined);
-        } else {
-          document.exitFullscreen().catch(() => undefined);
-        }
+        toggleFullscreen();
         setShowControls(true);
       }
     };
@@ -225,11 +381,7 @@ export function WatchPageClient({
     window.addEventListener("keydown", handleKeyDown);
 
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
-  const showPlayerControls = () => {
-    setShowControls(true);
-  };
+  }, [toggleFullscreen]);
 
   const togglePlayback = async () => {
     const video = videoRef.current;
@@ -299,78 +451,27 @@ export function WatchPageClient({
     setProgress(value);
   };
 
-  const handleEpisodeSelect = useCallback((episode: Episode) => {
-    const video = videoRef.current;
-
-    setNextCountdown(null);
-    setActiveEpisode(episode);
-    setProgress(0);
-    setCurrentTime(0);
-
-    if (video) {
-      video.currentTime = 0;
-      video.load();
-      if (isPlaying) {
-        video.play().catch(() => undefined);
-      }
-    }
-  }, [isPlaying]);
-
-  const goToNextEpisode = useCallback(() => {
-    const currentIndex = episodes.findIndex(
-      (episode) => episode.number === activeEpisode.number,
-    );
-    const nextEpisode = episodes[(currentIndex + 1) % episodes.length];
-
-    handleEpisodeSelect(nextEpisode);
-  }, [activeEpisode.number, episodes, handleEpisodeSelect]);
-
-  useEffect(() => {
-    if (nextCountdown === null) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      setNextCountdown((current) => {
-        if (current === null) {
-          return null;
-        }
-
-        if (current <= 1) {
-          window.setTimeout(goToNextEpisode, 0);
-          return null;
-        }
-
-        return current - 1;
-      });
-    }, 1000);
-
-    return () => window.clearTimeout(timer);
-  }, [goToNextEpisode, nextCountdown]);
-
   const handleVideoEnded = () => {
     setIsPlaying(false);
     setShowControls(true);
-    setNextCountdown(5);
+
+    if (canGoNext) {
+      setNextCountdown(5);
+    }
   };
 
-  const cancelNextEpisode = () => {
-    setNextCountdown(null);
-  };
-
-  const toggleFullscreen = async () => {
-    const player = playerRef.current;
-
-    if (!player) {
+  const handleVideoError = () => {
+    if (videoSource === localVideoSource) {
+      setVideoSource(fallbackVideoSource);
+      setVideoLoadFailed(false);
+      setIsBuffering(true);
       return;
     }
 
-    if (!document.fullscreenElement) {
-      await player.requestFullscreen().catch(() => undefined);
-      return;
-    }
-
-    await document.exitFullscreen().catch(() => undefined);
+    setIsBuffering(false);
+    setIsPlaying(false);
+    setShowControls(true);
+    setVideoLoadFailed(true);
   };
 
   return (
@@ -384,7 +485,7 @@ export function WatchPageClient({
             className="absolute inset-0 h-full w-full object-cover opacity-20 blur-sm"
             src={movie.bannerUrl}
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-black via-black/82 to-black" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black via-black/85 to-black" />
 
           <div
             className={`relative mx-auto grid gap-5 px-4 py-6 sm:px-6 lg:px-8 ${
@@ -394,31 +495,45 @@ export function WatchPageClient({
             }`}
           >
             <motion.div
+              animate={{ opacity: 1, y: 0 }}
               className="group overflow-hidden rounded-3xl border border-white/10 bg-black shadow-[0_30px_100px_rgba(0,0,0,0.55)]"
               initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.45 }}
-              ref={playerRef}
               onDoubleClick={toggleFullscreen}
               onMouseMove={showPlayerControls}
+              ref={playerRef}
+              transition={{ duration: 0.45 }}
             >
               <div className="relative aspect-video bg-black">
                 <video
                   className="h-full w-full object-cover"
+                  onCanPlay={() => setIsBuffering(false)}
                   onClick={togglePlayback}
                   onDurationChange={handleTimeUpdate}
                   onEnded={handleVideoEnded}
+                  onError={handleVideoError}
                   onLoadedMetadata={handleLoadedMetadata}
                   onPause={() => setIsPlaying(false)}
                   onPlay={() => setIsPlaying(true)}
+                  onPlaying={() => setIsBuffering(false)}
                   onTimeUpdate={handleTimeUpdate}
                   onWaiting={() => setIsBuffering(true)}
-                  onPlaying={() => setIsBuffering(false)}
-                  onCanPlay={() => setIsBuffering(false)}
                   poster={movie.bannerUrl}
                   ref={videoRef}
-                  src="/videos/demo.mp4"
+                  src={videoSource}
                 />
+
+                {videoLoadFailed && (
+                  <div className="absolute inset-0 grid place-items-center bg-black/70 px-6 text-center">
+                    <div>
+                      <p className="text-xl font-black text-white">
+                        Видео түр ачаалагдсангүй
+                      </p>
+                      <p className="mt-2 text-sm text-zinc-400">
+                        Түр хүлээгээд дахин оролдоно уу.
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {isBuffering && (
                   <div className="absolute inset-0 grid place-items-center bg-black/25">
@@ -437,7 +552,7 @@ export function WatchPageClient({
                   {isPlaying ? "Ⅱ" : "▶"}
                 </button>
 
-                {subtitle !== "Off" && (
+                {subtitle !== "Унтраах" && (
                   <div className="pointer-events-none absolute bottom-24 left-1/2 max-w-[80%] -translate-x-1/2 rounded-lg bg-black/70 px-4 py-2 text-center text-sm font-semibold text-white shadow-xl sm:text-base">
                     {subtitle === "Монгол"
                       ? "Энэ бол туршилтын хадмалын мөр юм."
@@ -455,19 +570,19 @@ export function WatchPageClient({
                       Дараагийн анги
                     </p>
                     <h3 className="mt-2 text-lg font-black">
-                      {nextCountdown} секундийн дараа эхэлнэ
+                      {nextCountdown} секундын дараа эхэлнэ
                     </h3>
                     <div className="mt-4 flex gap-2">
                       <button
                         className="flex-1 rounded-full bg-orange-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-orange-400"
-                        onClick={goToNextEpisode}
+                        onClick={() => goToNextEpisode(true)}
                         type="button"
                       >
                         Одоо үзэх
                       </button>
                       <button
                         className="flex-1 rounded-full border border-white/10 px-4 py-2 text-sm font-bold text-zinc-200 transition hover:border-orange-400/60"
-                        onClick={cancelNextEpisode}
+                        onClick={() => setNextCountdown(null)}
                         type="button"
                       >
                         Цуцлах
@@ -478,7 +593,7 @@ export function WatchPageClient({
               </div>
 
               <div
-                className={`space-y-4 border-t border-white/10 bg-black/92 p-4 transition duration-300 ${
+                className={`space-y-4 border-t border-white/10 bg-black/95 p-4 transition duration-300 ${
                   showControls || !isPlaying
                     ? "translate-y-0 opacity-100"
                     : "pointer-events-none translate-y-4 opacity-0"
@@ -503,6 +618,22 @@ export function WatchPageClient({
                     >
                       {isPlaying ? "Ⅱ" : "▶"}
                     </button>
+                    <button
+                      className="rounded-full border border-white/10 px-4 py-2 text-sm font-bold text-zinc-200 transition hover:border-orange-400/60 hover:text-orange-300 disabled:cursor-not-allowed disabled:opacity-40"
+                      disabled={!canGoPrevious}
+                      onClick={goToPreviousEpisode}
+                      type="button"
+                    >
+                      Өмнөх анги
+                    </button>
+                    <button
+                      className="rounded-full bg-orange-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-40"
+                      disabled={!canGoNext}
+                      onClick={() => goToNextEpisode(true)}
+                      type="button"
+                    >
+                      Дараагийн анги
+                    </button>
                     <span className="min-w-28 text-sm font-semibold text-zinc-300">
                       {formatTime(currentTime)} / {formatTime(duration)}
                     </span>
@@ -524,14 +655,14 @@ export function WatchPageClient({
                       onClick={() => setIsMuted((current) => !current)}
                       type="button"
                     >
-                      {isMuted ? "Дуугүй" : "M"}
+                      {isMuted ? "Дуугүй" : "Дуу"}
                     </button>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3">
                     <select
                       aria-label="Хурд"
-                      className="h-10 rounded-full border border-white/10 bg-white/[0.06] px-3 text-sm font-semibold text-white outline-none"
+                      className="h-10 rounded-full border border-white/10 bg-white/[0.06] px-3 text-sm font-semibold text-white outline-none transition hover:border-orange-400/50"
                       onChange={(event) =>
                         setPlaybackRate(Number(event.target.value))
                       }
@@ -576,7 +707,7 @@ export function WatchPageClient({
                       onClick={() => setIsTheaterMode((current) => !current)}
                       type="button"
                     >
-                      Театр
+                      Театр горим
                     </button>
                     <button
                       className="rounded-full border border-white/10 px-4 py-2 text-sm font-bold transition hover:border-orange-400/60 hover:text-orange-300"
@@ -585,22 +716,15 @@ export function WatchPageClient({
                     >
                       Дэлгэц дүүргэх
                     </button>
-                    <button
-                      className="rounded-full bg-orange-500 px-5 py-2 text-sm font-bold text-white transition hover:bg-orange-400"
-                      onClick={goToNextEpisode}
-                      type="button"
-                    >
-                      Дараагийн анги
-                    </button>
                   </div>
                 </div>
               </div>
             </motion.div>
 
             <motion.aside
+              animate={{ opacity: 1, x: 0 }}
               className="rounded-3xl border border-white/10 bg-white/[0.04] p-4 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto"
               initial={{ opacity: 0, x: 18 }}
-              animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.45, delay: 0.08 }}
             >
               <div className="flex items-center justify-between gap-3">
@@ -618,7 +742,7 @@ export function WatchPageClient({
                   <motion.button
                     className={`grid grid-cols-[72px_1fr] gap-3 rounded-2xl border p-3 text-left transition ${
                       episode.number === activeEpisode.number
-                        ? "border-orange-400 bg-orange-500/15"
+                        ? "border-orange-400 bg-orange-500/15 shadow-[0_16px_38px_rgba(249,115,22,0.16)]"
                         : "border-white/10 bg-black/35 hover:border-orange-400/50 hover:bg-white/[0.07]"
                     }`}
                     key={episode.number}
@@ -653,13 +777,14 @@ export function WatchPageClient({
           <motion.div
             className="max-w-4xl"
             initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.2 }}
+            whileInView={{ opacity: 1, y: 0 }}
           >
             <div className="flex flex-wrap gap-3">
               <Badge tone="orange">★ {movie.rating}</Badge>
               <Badge tone="dark">{movie.year}</Badge>
               <Badge tone="dark">{movie.country}</Badge>
+              <Badge tone="dark">{activeEpisode.number}-р анги</Badge>
               {detail.genres.map((genre) => (
                 <Badge key={genre} tone="light">
                   {genre}
